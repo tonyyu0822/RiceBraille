@@ -129,8 +129,8 @@ def transform_image_test(image):
 @dataclass(frozen=True)
 class TransformMetadata:
     transformation_matrix: Any
-    im_dims: (int, int)
-    desired_dimensions: (int, int)
+    im_dims: (float, float)
+    desired_dimensions: (float, float)
 
 
 def transform_point(point: (int, int), transform_metadata: TransformMetadata):
@@ -207,3 +207,5 @@ if __name__ == '__main__':
 #print(cap.get(cv2.CAP_PROP_FPS))
 #transform_point([0, 0], my_mat)
 #test_angles("images/ar_dig.png", "images/angles.mp4")
+
+#get_transform_video("images/englebretson4.MOV", (8.5, 11))
