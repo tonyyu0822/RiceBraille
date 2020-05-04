@@ -280,6 +280,7 @@ def get_transform_video(video_path, desired_dimensions=(27.94, 29.21), auto_page
 >>>>>>> 15487da... added manual page calibration
     return TransformMetadata(m, im_dims, desired_dimensions)
 
+<<<<<<< HEAD
 if __name__ == '__main__':
     ############# FOR TESTING
     video_path = "./test_images/test_0.mp4"
@@ -287,6 +288,15 @@ if __name__ == '__main__':
     for i in range(20, 70, 5):
         get_transform_video(video_path, i)
 
+=======
+'''
+dig_markers = find_markers("images/dig_ar_sample.jpg")
+transform_and_markers("images/ar_sample.jpg", (816, 1056))
+unaltered_markers = find_markers("images/ar_sample.jpg")
+my_mat, dims = transform_image("images/ar_sample.jpg", (816, 1056))
+print(transform_point(unaltered_markers[0].center, dims, (816, 1056), my_mat))
+'''
+>>>>>>> 1c63a4d... improved UI to be screen reader accessible.
 #transform_metadata = get_transform_video("test_images/test.mp4")
 #print(transform_point((591, 263), transform_metadata))
 # transform_point([0, 0], my_mat)
