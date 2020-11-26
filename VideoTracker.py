@@ -2,17 +2,22 @@ import cv2
 from random import randint
 
 import scan
+import BraillePage
 
 
 class VideoTracker:
     """Video Tracker Class"""
     trackerTypes = ['BOOSTING', 'MIL', 'KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
 
-    def __init__(self, video_path, tracker_type="CSRT", auto_calibrate=False, output_path='./test_output/output.mp4',
+    # Store class representing page of Braille being read
+    braille_page = None
+
+    def __init__(self, video_path, page_path, tracker_type="CSRT", auto_calibrate=False, output_path='./test_output/output.mp4',
                  show_frame=False):
         """
         init video tracker
         :param video_path: Path of input video
+        :param page_path: Path of input Braille page being read
         :param tracker_type: type of OpenCV tracker to use, CSRT seems to work the best so far and is default
         :param auto_calibrate: If True, will use pre-defined bounding boxes instead of manual
         :param output_path: Path of output video, will create if does not exist
@@ -20,6 +25,9 @@ class VideoTracker:
         """
         # Create a video capture object to read videos
         self.cap = cv2.VideoCapture(video_path)
+
+        # load in page of Braille
+        self.braille_page = BraillePage.BraillePage(page_path) 
 
         # video info
         self.vid_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -101,13 +109,20 @@ class VideoTracker:
 
         return tracker
 
-    def read_first_frame(self):
+    def read_frame(self, second):
         """
-        Reads first frame for purposes of calibration & tracker init
-        :return:
+        Reads frame at given time stamp of video
+        :param second: the time stamp of the video to read, in seconds
+        :return: the frame at the input time stamp
         """
-        # Read first frame
-        success, frame = self.cap.read()
+        # Read frame
+        if second == 0:
+            success, frame = self.cap.read()
+        else:
+            frame_count = int(second * self.get_fps())
+            for i in range(frame_count):
+                self.cap.grab()
+            success, frame = self.cap.retrieve()
 
         try:
             frame = cv2.resize(frame, (1920, 1080))
@@ -125,12 +140,19 @@ class VideoTracker:
 
         return frame
 
+    def get_fps(self):
+        """
+        Gets fps of input video file
+        :return: fps of input video
+        """
+        return self.cap.get(cv2.CAP_PROP_FPS)
+
     def manual_calibration(self):
         """
         Manually draw bounding boxes
         :return: bounding boxes, first frame, color of each box
         """
-        frame = self.read_first_frame()
+        frame = self.read_frame(5)
 
         # Select boxes
         bboxes = []
@@ -170,7 +192,7 @@ class VideoTracker:
                                    (1100, 981, 98, 66),
                                    (1248, 983, 101, 63),
                                    (1359, 881, 94, 60)]
-        frame = self.read_first_frame()
+        frame = self.read_frame(0)
 
         # Select boxes
         bboxes = []
@@ -228,9 +250,10 @@ class VideoTracker:
         :param show_frame: If True, program updates the frame during processing
         :return:
         """
-        # Initialize Coordinate List
+        # Initialize Coordinate List and Associated Letter List
         x_centers = []
         y_centers = []
+        letters = []
         frame_num = 0
 
         # Process video and track objects
@@ -253,6 +276,7 @@ class VideoTracker:
 
             x_centers_per_frame = [0] * 8
             y_centers_per_frame = [0] * 8
+            letters_per_frame = [0] * 8
 
             # draw tracked objects
             for i, newbox in enumerate(boxes):
@@ -264,12 +288,14 @@ class VideoTracker:
                 y_center_pixel = boxes[i][1] + boxes[i][3] / 2
 
                 x_centers_per_frame[i], y_centers_per_frame[i] = scan.transform_point((x_center_pixel, y_center_pixel), self.transformation_metadata)
+                letters_per_frame[i] = self.braille_page.position2Char(x_centers_per_frame[i], y_centers_per_frame[i])
                 #x_centers_per_frame[i] = x_center_pixel
                 #y_centers_per_frame[i] = y_center_pixel
 
             # add coordinates from this frame to overall coordinate list
             x_centers.append(x_centers_per_frame)
             y_centers.append(y_centers_per_frame)
+            letters.append(letters_per_frame)
             frame_num += 1
             #print(x_centers, y_centers)
 
@@ -287,4 +313,4 @@ class VideoTracker:
 
 
 if __name__ == '__main__':
-    tracker = VideoTracker("./test_images/full_page2.MOV", auto_calibrate=False, show_frame=True, tracker_type="CSRT")
+    tracker = VideoTracker("./test_images/test_0.mp4", './braille_files/B_2019 project FingerTracker.brf', auto_calibrate=False, show_frame=True, tracker_type="CSRT")
