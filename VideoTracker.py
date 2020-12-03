@@ -9,9 +9,6 @@ class VideoTracker:
     """Video Tracker Class"""
     trackerTypes = ['BOOSTING', 'MIL', 'KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
 
-    # Store class representing page of Braille being read
-    braille_page = None
-
     def __init__(self, video_path, page_path, tracker_type="CSRT", auto_calibrate=False, output_path='./test_output/output.mp4',
                  show_frame=False):
         """
@@ -38,6 +35,9 @@ class VideoTracker:
         # Output info
         self.output_path = output_path
 
+        # Get page transform
+        self.transformation_metadata = scan.get_transform_video(video_path, (11.5625, 11))
+        
         # Calibration of boxes
         if auto_calibrate:
             # use predefined bounding boxes
@@ -55,8 +55,6 @@ class VideoTracker:
         # open and set properties
         video_out = cv2.VideoWriter()
         video_out.open(self.output_path, output_format, self.fps, (self.vid_width, self.vid_height), True)
-
-        self.transformation_metadata = scan.get_transform_video(video_path, (11.5, 11.0))
 
         # run tracker and save video
         print(self.process_tracker(self.cap, multi_tracker, colors, video_out, show_frame))
@@ -205,11 +203,12 @@ class VideoTracker:
 
         return bboxes, frame, colors
 
-    def generate_output_file(self, x_centers, y_centers):
+    def generate_output_file(self, x_centers, y_centers, letters):
         """
         Generates tab delimited output file
-        :param x_centers: center of each box, x coord
-        :param y_centers: center of each box, y coord
+        :param x_centers: list of center of each box, x coord
+        :param y_centers: list of center of each box, y coord
+        :param letters: list of the letter on the Braille page corresponding to the input x and y coords
         :return:
         """
         with open('BrailleOutput.txt', 'w+') as outfile:
@@ -228,17 +227,31 @@ class VideoTracker:
                           '\tX7'
                           '\tY7'
                           '\tX8'
-                          '\tY8\n')
+                          '\tY8'
+                          '\tL1'
+                          '\tL2'
+                          '\tL3'
+                          '\tL4'
+                          '\tL5'
+                          '\tL6'
+                          '\tL7'
+                          '\tL8\n')
 
             for i in range(len(x_centers)):
+                # formatting a single line containing coords X1, Y1 through X8, Y8
                 frame_str = str(i) + '\t' + "\t".join(["{0}\t{1}".format(x, y) for x, y in zip(x_centers[i], y_centers[i])])
+
+                # adding the associated letters to frame_str
+                letter_str = '\t' + "\t".join(["{0}".format(letter) for letter in letters[i]])
+                frame_str += letter_str
+
                 # for box in range(8):
                 #     if box != 7:
                 #         row_data += str(x_centers[i][box]) + '\t' + str(y_centers[i][box]) + '\t'
                 #     else:
                 #         row_data += str(x_centers[8][box]) + '\t' + str(y_centers[8][box])
                 outfile.write(frame_str + '\n')
-        return x_centers, y_centers
+        return x_centers, y_centers, letters
 
     def process_tracker(self, cap, multi_tracker, colors, video_out, show_frame=False):
         """
@@ -289,6 +302,7 @@ class VideoTracker:
 
                 x_centers_per_frame[i], y_centers_per_frame[i] = scan.transform_point((x_center_pixel, y_center_pixel), self.transformation_metadata)
                 letters_per_frame[i] = self.braille_page.position2Char(x_centers_per_frame[i], y_centers_per_frame[i])
+                print(x_centers_per_frame, y_centers_per_frame)
                 #x_centers_per_frame[i] = x_center_pixel
                 #y_centers_per_frame[i] = y_center_pixel
 
@@ -308,8 +322,8 @@ class VideoTracker:
             if cv2.waitKey(1) & 0xFF == 27:  # Esc pressed
                 break
 
-        x_centers, y_centers = self.generate_output_file(x_centers, y_centers)
-        return x_centers, y_centers
+        x_centers, y_centers, letters = self.generate_output_file(x_centers, y_centers, letters)
+        return x_centers, y_centers, letters
 
 
 if __name__ == '__main__':
