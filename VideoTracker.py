@@ -37,7 +37,7 @@ class VideoTracker:
 
         # Get page transform
         self.transformation_metadata = scan.get_transform_video(video_path, (11.5625, 11))
-        
+
         # Calibration of boxes
         if auto_calibrate:
             # use predefined bounding boxes
@@ -302,7 +302,6 @@ class VideoTracker:
 
                 x_centers_per_frame[i], y_centers_per_frame[i] = scan.transform_point((x_center_pixel, y_center_pixel), self.transformation_metadata)
                 letters_per_frame[i] = self.braille_page.position2Char(x_centers_per_frame[i], y_centers_per_frame[i])
-                print(x_centers_per_frame, y_centers_per_frame)
                 #x_centers_per_frame[i] = x_center_pixel
                 #y_centers_per_frame[i] = y_center_pixel
 
@@ -327,4 +326,4 @@ class VideoTracker:
 
 
 if __name__ == '__main__':
-    tracker = VideoTracker("./test_images/test_0.mp4", './braille_files/B_2019 project FingerTracker.brf', auto_calibrate=False, show_frame=True, tracker_type="CSRT")
+    tracker = VideoTracker("./test_images/test_1.mp4", './braille_files/B_2019 project FingerTracker.brf', auto_calibrate=False, show_frame=True, tracker_type="CSRT")

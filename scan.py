@@ -32,19 +32,14 @@ def transform_image(image, paper_dims=(825, 1100), output_image="scannedImage.jp
     # in the image
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    edged = cv2.Canny(gray, 75, 200)
-    # test = cv2.resize(edged, (1280,800))
-    # cv2.imshow('test', test)
-
-    # show the original image and the edge detected image
-    print("STEP 1: Edge Detection")
-    #cv2.imshow("Image", image)
-    #cv2.imshow("Edged", edged)
-    #cv2.waitKey(0)
-    #cv2.destroyAllWindows()
+    gray = cv2.GaussianBlur(gray, (5, 5), 0)
+    # show_image(gray)
+    # TEST - maybe min value is too high? changed from 75 to 5
+    edged = cv2.Canny(gray, 5, 200, True)
+    # show_image(edged)
 
     # find the contours in the edged image, keeping only the
-    # largest ones, and initialize the screen contour
+    # largest ones, and initialize the screen contour 
     cnts = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     cnts = imutils.grab_contours(cnts)
     cnts = sorted(cnts, key=cv2.contourArea, reverse=True)[:5]
@@ -71,14 +66,12 @@ def transform_image(image, paper_dims=(825, 1100), output_image="scannedImage.jp
             screenCnt = approx
 
             # to verify if we detected correct points
-            colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (255, 255, 255)]
+            colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (255, 255, 255), (100, 100, 100), (15, 205, 200)]
             for i in range(4):
                 test = cv2.circle(image, (approx[i][0][0], approx[i][0][1]), radius=5, color=colors[i], thickness=-1)
-            test = cv2.resize(test, (1280,800))
-            cv2.imshow("test", test)
-            cv2.waitKey(0)
+            show_image(test)
             break
-
+    
     # show the contour (outline) of the piece of paper
     print("STEP 2: Find contours of paper")
     # cv2.drawContours(image, [screenCnt], -1, (0, 255, 0), 2)
@@ -108,82 +101,29 @@ def transform_image(image, paper_dims=(825, 1100), output_image="scannedImage.jp
 
     return M, dims
 
+def show_image(image):
+    temp = cv2.resize(image, (1280, 800))
+    cv2.imshow('test', temp)
+    cv2.waitKey(0)
 
-def find_markers(frame, output_image="markers.jpg"):
-    """
-    :param image_file: filename to read from
-    :param output_image: name of file to write new images to
-    """
+def transform_image_test(image):
+    # uses harris corner detection instead of canny edge detection
+    copy = image.copy()
+    gray = cv2.cvtColor(copy, cv2.COLOR_BGR2GRAY)
+    gray = cv2.GaussianBlur(gray, (5, 5), 0)
+    gray = cv2.Canny(gray, 75, 200)
+    show_image(gray)
 
-    markers = ar.detect_markers(frame)
-    print(frame.shape)
-    print(markers)
-    for marker in markers:
-        marker.highlite_marker(frame)
-    #cv2.imshow("Markers", frame)
-    #cv2.waitKey(0)
-    #cv2.imwrite(output_image, frame)
-    return markers
+    gray = np.float32(gray)
+    dst = cv2.cornerHarris(gray, 2, 3, 0.04)
 
+    dst = cv2.dilate(dst, None)
 
-def transform_and_markers(image_file, paper_dims=(825, 1100), scanned_output="scanned.jpg",
-                          final_output="scannedMarkers.jpg"):
-    """
-    :param image_file: original image file to read from
-    :param paper_dims: paper dims to scale to (as used in transform image)
-    :param scanned_output: output file for image that is scanned but does not have ar markers detected yet
-    :param final_output: file name for image with ar markers detect
-    """
-    transform_image(image_file, paper_dims, scanned_output)
-    find_markers(scanned_output, final_output)
+    copy[dst>0.3 * dst.max()]=[0,0,255]
 
-
-def decode(im):
-    # Find barcodes and QR codes
-    decodedObjects = pyzbar.decode(im)
-
-    # Print results
-    for obj in decodedObjects:
-        print('Type : ', obj.type)
-        print('Data : ', obj.data, '\n')
-
-    return decodedObjects
-
-
-# Display barcode and QR code location
-def highlightCodes(im, decodedObjects):
-    # Loop over all decoded objects
-    for decodedObject in decodedObjects:
-        points = decodedObject.polygon
-        print(points)
-        # If the points do not form a quad, find convex hull
-        if len(points) > 4:
-            hull = cv2.convexHull(np.array([point for point in points], dtype=np.float32))
-            hull = list(map(tuple, np.squeeze(hull)))
-        else:
-            hull = points
-
-        # Number of points in the convex hull
-        n = len(hull)
-
-        # Draw the convext hull
-        for j in range(0, n):
-            cv2.line(im, hull[j], hull[(j + 1) % n], (255, 0, 0), 3)
-
-    # Display results
-    return im
-
-
-def find_qr_code(image_file, output_image='qr_code.jpg'):
-    im = cv2.imread(image_file)
-    decodedObjects = decode(im)
-    im2 = highlightCodes(im, decodedObjects)
-    cv2.imwrite(output_image, im2)
-
-
-def transform_and_qr(image_file, paper_dims=(425, 550), scanned_output="scanned.jpg", final_output="scannedQR.jpg"):
-    transform_image(image_file, paper_dims, scanned_output)
-    find_qr_code(scanned_output, final_output)
+    test = cv2.resize(copy, (1280,800))
+    cv2.imshow('dst', test)
+    cv2.waitKey(0)
 
 
 @dataclass(frozen=True)
@@ -205,45 +145,58 @@ def transform_point(point: (int, int), transform_metadata: TransformMetadata):
     y = cur.flatten()[1] * transform_metadata.desired_dimensions[1] / transform_metadata.im_dims[1]
     return x, y
 
+####### for debugging, remove later
+def read_frame(cap, second):
+    """
+    Reads frame at given time stamp of video
+    :param second: the time stamp of the video to read, in seconds
+    :return: the frame at the input time stamp
+    """
+    # Read frame
+    if second == 0:
+        success, frame = cap.read()
+    else:
+        frame_count = int(second * cap.get(cv2.CAP_PROP_FPS))
+        for i in range(frame_count):
+            cap.grab()
+        success, frame = cap.retrieve()
 
-def get_transform_video(video_path, desired_dimensions=(8.5, 11.0)):
+    # try:
+        # frame = cv2.resize(frame, (1920, 1080))
+    # except cv2.error as err:
+        # print("Failed to read video")
+        # raise err
+
+    # self.vid_width = 1920
+    # self.vid_height = 1080
+
+    # quit if unable to read the video file
+    if not success:
+        print('Failed to read video')
+        raise Exception("Failed to read video")
+
+    return frame
+
+
+def get_transform_video(video_path, desired_dimensions=(11.5625, 11.0)):
     cap = cv2.VideoCapture(video_path)
     video_length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    cap.set(cv2.CAP_PROP_POS_FRAMES, video_length - 50)
+    cap.set(cv2.CAP_PROP_POS_FRAMES, video_length - 25)
     ret, frame = cap.read()
-    #cv2.imshow("frame", frame)
-    #cv2.waitKey(0)
+    
     m, im_dims = transform_image(frame)
     return TransformMetadata(m, im_dims, desired_dimensions)
 
-#transform_and_markers("images/arFour.jpg")
-'''
-dig_markers = find_markers("images/dig_ar_sample.jpg")
-transform_and_markers("images/ar_sample.jpg", (816, 1056))
-unaltered_markers = find_markers("images/ar_sample.jpg")
-my_mat, dims = transform_image("images/ar_sample.jpg", (816, 1056))
-print(transform_point(unaltered_markers[0].center, dims, (816, 1056), my_mat))
-'''
+if __name__ == '__main__':
+    ############# FOR TESTING
+    video_path = "./test_images/test_0.mp4"
+    get_transform_video(video_path)
+    for i in range(20, 70, 5):
+        get_transform_video(video_path, i)
+
 #transform_metadata = get_transform_video("test_images/test.mp4")
 #print(transform_point((591, 263), transform_metadata))
 # transform_point([0, 0], my_mat)
-
-def test_angles(orig_img, video_path):
-    cap = cv2.VideoCapture(video_path)
-    true_markers = find_markers(orig_img)
-    gained = []
-    #print(true_markers[0].center)
-    i = 0
-    while(cap.isOpened()):
-        i += 1
-        ret, frame = cap.read()
-        if not ret:
-            break
-        if i % 30 == 0:
-            transform_and_markers(frame, (816, 1056))
-
-
-
 
 
 #get_transform_video("images/test_vid.mp4")

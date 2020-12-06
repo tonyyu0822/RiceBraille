@@ -77,7 +77,7 @@ class BraillePage:
         """
         if (x_pos >= self.leftMargin and x_pos < self.pageWidth - self.rightMargin and y_pos >= self.topMargin and y_pos < self.pageHeight - self.botMargin):
             # if statement checks if x,y finger position is within the margins
-            gridCoords = position2GridCoord(x_pos, y_pos)
+            gridCoords = self.position2GridCoord(x_pos, y_pos)
             row = gridCoords[0]
             column = gridCoords[1]
             return self.charMatrix[column][row], row, column
