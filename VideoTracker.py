@@ -9,13 +9,8 @@ class VideoTracker:
     """Video Tracker Class"""
     trackerTypes = ['BOOSTING', 'MIL', 'KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
 
-<<<<<<< HEAD
     def __init__(self, video_path, page_path, tracker_type="CSRT", auto_calibrate=False, output_path='./test_output/output.mp4',
-                 show_frame=False):
-=======
-    def __init__(self, video_path, tracker_type="CSRT", auto_calibrate=False, auto_page_calibrate=True, output_path='./test_output/output.mp4',
-                 show_frame=False, paper_dims=(27.94, 29.21)):
->>>>>>> 15487da... added manual page calibration
+                 show_frame=False, page_dims=(11.5625, 11)):
         """
         init video tracker
         :param video_path: Path of input video
@@ -61,11 +56,6 @@ class VideoTracker:
         video_out = cv2.VideoWriter()
         video_out.open(self.output_path, output_format, self.fps, (self.vid_width, self.vid_height), True)
 
-<<<<<<< HEAD
-=======
-        self.transformation_metadata = scan.get_transform_video(video_path, paper_dims, auto_page_calibrate=auto_page_calibrate)
-
->>>>>>> 15487da... added manual page calibration
         # run tracker and save video
         print(self.process_tracker(self.cap, multi_tracker, colors, video_out, show_frame))
 

@@ -30,10 +30,11 @@ class Example(wx.Frame):
 
     def InitUI(self):
 
+        # panel = window on which controls are placed
         panel = wx.Panel(self)
 
+        # set font
         font = wx.SystemSettings.GetFont(wx.SYS_SYSTEM_FONT)
-
         font.SetPointSize(9)
 
         vbox = wx.BoxSizer(wx.VERTICAL)
@@ -88,8 +89,10 @@ class Example(wx.Frame):
 
     def StartProcessing(self, e):
         name = fd.askopenfilenames()
-        print(name)
-        VideoTracker(name[0], auto_calibrate=False, auto_page_calibrate=self.auto_page.IsChecked(),
+        print("---------------")
+        print(self.auto_page)
+        print("---------------")
+        VideoTracker(name[0], './braille_files/B_2019 project FingerTracker.brf', auto_calibrate=False, auto_page_calibrate=self.auto_page.IsChecked(),
                      show_frame=self.show_frames.IsChecked(), paper_dims=(float(self.page_length.GetValue()), float(self.page_width.GetValue())))
         self.close()
 

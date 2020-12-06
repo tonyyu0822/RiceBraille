@@ -52,7 +52,6 @@ def transform_image(image, automatic=False, paper_dims=(1100, 1150), output_imag
     # in the image
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (5, 5), 0)
-<<<<<<< HEAD
     gray = cv2.GaussianBlur(gray, (5, 5), 0)
     # show_image(gray)
     # TEST - maybe min value is too high? changed from 75 to 5
@@ -100,60 +99,6 @@ def transform_image(image, automatic=False, paper_dims=(1100, 1150), output_imag
     # cv2.imshow("Outline", image)
     # cv2.waitKey(0)
     #cv2.destroyAllWindows()
-=======
-    edged = cv2.Canny(gray, 75, 200)
-
-    # show the original image and the edge detected image
-    print("STEP 1: Edge Detection")
-    cv2.namedWindow('CapturedImage', cv2.WINDOW_NORMAL)
-    cv2.imshow("CapturedImage", image)
-    cv2.imwrite("image.jpg", image)
-    edgedS = cv2.resize(edged, (960, 540))
-    #cv2.imshow("Edged", edgedS)
-
-
-    # find the contours in the edged image, keeping only the
-    # largest ones, and initialize the screen contour
-    if automatic:
-        cnts = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-        cnts = imutils.grab_contours(cnts)
-        cnts = sorted(cnts, key=cv2.contourArea, reverse=True)[:5]
-
-        # loop over the contours
-        for c in cnts:
-            # approximate the contour
-            peri = cv2.arcLength(c, True)
-            approx = cv2.approxPolyDP(c, 0.02 * peri, True)
-
-            # if our approximated contour has four points, then we
-            # can assume that we have found our screen
-            if len(approx) == 4:
-                screenCnt = approx
-                break
-    else:
-        cv2.setMouseCallback('CapturedImage', click, image)
-        while(len(screenCnt) < 4):
-            key = cv2.waitKey(1) & 0xFF
-            if key == 27 or key == ord("q"):
-                print('Image cropped at coordinates: {}'.format(screenCnt))
-                cv2.destroyAllWindows()
-                break
-        screenCnt = np.asarray(screenCnt)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    # show the contour (outline) of the piece of paper
-    print("STEP 2: Find contours of paper")
-    print(screenCnt)
-    try:
-        cv2.drawContours(image, [screenCnt], -1, (0, 255, 0), 2)
-    except TypeError:
-        transform_image(orig, automatic=False, paper_dims=paper_dims, output_image=output_image)
-
-    imageS = cv2.resize(image, (960, 540))
-    cv2.imshow("Outline", imageS)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
->>>>>>> 15487da... added manual page calibration
 
     # apply the four point transform to obtain a top-down
     # view of the original image
@@ -168,15 +113,9 @@ def transform_image(image, automatic=False, paper_dims=(1100, 1150), output_imag
     # show the original and scanned images
     print("STEP 3: Apply perspective transform")
 
-<<<<<<< HEAD
     # cv2.imwrite(output_image, cv2.resize(warped, paper_dims))
     # cv2.imshow("Scanned", cv2.resize(warped, paper_dims))
     # cv2.waitKey(0)
-=======
-    #cv2.imwrite(output_image, cv2.resize(warped, paper_dims))
-    #cv2.imshow("Scanned", cv2.resize(warped, paper_dims))
-    cv2.waitKey(0)
->>>>>>> 15487da... added manual page calibration
 
     print("Done transform initialization")
 
@@ -256,7 +195,6 @@ def read_frame(cap, second):
         print('Failed to read video')
         raise Exception("Failed to read video")
 
-<<<<<<< HEAD
     return frame
 
 
@@ -267,20 +205,8 @@ def get_transform_video(video_path, desired_dimensions=(11.5625, 11.0)):
     ret, frame = cap.read()
     
     m, im_dims = transform_image(frame)
-=======
-def get_transform_video(video_path, desired_dimensions=(27.94, 29.21), auto_page_calibrate=True):
-    cap = cv2.VideoCapture(video_path)
-    video_length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    print(video_length)
-    cap.set(cv2.CAP_PROP_POS_FRAMES, video_length-60)
-    ret, frame = cap.read()
-    cv2.imshow("frame", frame)
-    cv2.waitKey(0)
-    m, im_dims = transform_image(frame, automatic=auto_page_calibrate)
->>>>>>> 15487da... added manual page calibration
     return TransformMetadata(m, im_dims, desired_dimensions)
 
-<<<<<<< HEAD
 if __name__ == '__main__':
     ############# FOR TESTING
     video_path = "./test_images/test_0.mp4"
@@ -288,15 +214,6 @@ if __name__ == '__main__':
     for i in range(20, 70, 5):
         get_transform_video(video_path, i)
 
-=======
-'''
-dig_markers = find_markers("images/dig_ar_sample.jpg")
-transform_and_markers("images/ar_sample.jpg", (816, 1056))
-unaltered_markers = find_markers("images/ar_sample.jpg")
-my_mat, dims = transform_image("images/ar_sample.jpg", (816, 1056))
-print(transform_point(unaltered_markers[0].center, dims, (816, 1056), my_mat))
-'''
->>>>>>> 1c63a4d... improved UI to be screen reader accessible.
 #transform_metadata = get_transform_video("test_images/test.mp4")
 #print(transform_point((591, 263), transform_metadata))
 # transform_point([0, 0], my_mat)
