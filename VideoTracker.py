@@ -117,7 +117,7 @@ class VideoTracker:
         if second == 0:
             success, frame = self.cap.read()
         else:
-            frame_count = int(second * self.get_fps())
+            frame_count = int(second * self.fps)
             for i in range(frame_count):
                 self.cap.grab()
             success, frame = self.cap.retrieve()
@@ -137,13 +137,6 @@ class VideoTracker:
             raise Exception("Failed to read video")
 
         return frame
-
-    def get_fps(self):
-        """
-        Gets fps of input video file
-        :return: fps of input video
-        """
-        return self.cap.get(cv2.CAP_PROP_FPS)
 
     def manual_calibration(self):
         """
