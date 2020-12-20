@@ -8,44 +8,40 @@ class BraillePage:
     numRows = 26
     numColumns = 42
 
-    # Braille sheet dimensions
-    pageWidth = 11.5625
+    ### NOTE: might want to change page/margin dimensions to inputs? not sure if this is necessary feature
+    # Braille sheet dimensions (in inches)
+    pageWidth = 11.5 # originally 11.5625, but should be 11.5? double check measurements later
     pageHeight = 11
     leftMargin = 0.875
     rightMargin = 0.75
     topMargin = 0.5
     botMargin = 0.625
 
-    # Page matrix (will be None until assignCharGridCoords() is called)
-    charMatrix = None
-
-    # THESE ARE TEST VALUES, REAL VALUES SHOULD BE GENERATED FROM FINGER TRACKING
-    x_pos = 3.975
-    y_pos = 5.875
-
-    def __init__(self, brf_file):
+    def __init__(self, brf_file_path):
         """
         initialize page of Braille
-        :param brf_file: path to .brf file of Braille to load in
+        :param brf_file_path: path to .brf file of Braille to load in
         """
         # load in file at input path
-        fileStr = self.loadBrf(brf_file)
+        fileStr = self.loadBrf(brf_file_path)
 
         # convert input Braille file into a matrix
         self.charMatrix = self.assignCharGridCoords(fileStr)
     
     # Converts .brf file into text string
-    def loadBrf(self, brf_file):
+    def loadBrf(self, brf_file_path):
         """
         Loads in Braille .brf file into a String
-        :param brf_file: path to .brf file of Braille to load in 
+        :param brf_file_path: path to .brf file of Braille to load in 
+        :return: text string read from file at input path
         """
-        with open(brf_file, 'r') as fh:
+        with open(brf_file_path, 'r') as fh:
             fileStr = fh.read()
         return fileStr
         
     def assignCharGridCoords(self, textFile):
         """
+        :param textFile: test string obtained from text file of braille printout
         :return: np matrix where each character is allocated a grid position on the page
         ex. reference 3rd row, 5th character by calling assignCharGridCoords(textFile,numRows,numColumns)[5][3]
         """
@@ -75,8 +71,8 @@ class BraillePage:
         """
         :returns: the character at the given x, y positions (continuous) measured from top left of Braille sheet. Also returns the row and column the character is located at.
         """
+        # check if x, y finger position is with page margins
         if (x_pos >= self.leftMargin and x_pos < self.pageWidth - self.rightMargin and y_pos >= self.topMargin and y_pos < self.pageHeight - self.botMargin):
-            # if statement checks if x,y finger position is within the margins
             gridCoords = self.position2GridCoord(x_pos, y_pos)
             row = gridCoords[0]
             column = gridCoords[1]
@@ -84,14 +80,6 @@ class BraillePage:
         else:
             #returns char = ' ' and row/column = -1 if finger outside margins
             return ' ', -1, -1
-        
-        
-    # charMatrix = assignCharGridCoords(file, numRows, numColumns)
-
-    # # HERE YOU CAN ITERATE OVER ALL FINGERS
-    # charUnderFinger = position2Char(x_pos, y_pos, pageWidth, pageHeight, leftMargin, rightMargin, topMargin, botMargin, numRows, numColumns,charMatrix)
-
-    # print(charUnderFinger)
 
 if __name__ == '__main__':
     test = BraillePage('./braille_files/B_2019 project FingerTracker.brf')
