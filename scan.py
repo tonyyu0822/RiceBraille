@@ -65,7 +65,7 @@ def transform_image(image, automatic=False, paper_dims=(1100, 1150), output_imag
 
     # find the contours in the edged image, keeping only the
     # largest ones, and initialize the screen contour
-    if automatic:
+    if False:
         cnts = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         cnts = imutils.grab_contours(cnts)
         cnts = sorted(cnts, key=cv2.contourArea, reverse=True)[:5]
@@ -262,6 +262,8 @@ def test_angles(orig_img, video_path):
 
 
 
+if __name__ == "__main__":
+    get_transform_video('./test_images/test_0.mp4')
 
 
 #get_transform_video("images/test_vid.mp4")
