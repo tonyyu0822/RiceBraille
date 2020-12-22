@@ -88,6 +88,10 @@ def transform_image(image, paper_dims=(825, 1100), output_image="scannedImage.jp
                 show_image(with_corners)
                 break
     else:
+        # display image so it can be clicked on
+        cv2.namedWindow('CapturedImage', cv2.WINDOW_NORMAL)
+        cv2.imshow("CapturedImage", image)
+
         cv2.setMouseCallback('CapturedImage', click, image)
         while(len(screenCnt) < 4):
             key = cv2.waitKey(1) & 0xFF
@@ -113,6 +117,7 @@ def transform_image(image, paper_dims=(825, 1100), output_image="scannedImage.jp
     # view of the original image
     M, warped, dims = four_point_transform(orig, screenCnt.reshape(4, 2))
     show_image(warped)
+    #show_image(warped)
     #find_markers(warped)
     # convert the warped image to grayscale, then threshold it
     # to give it that 'black and white' paper effect
@@ -172,10 +177,12 @@ def get_transform_video(video_path, desired_dimensions=(11.5, 11.0), black_backg
         cap.set(cv2.CAP_PROP_POS_FRAMES, video_length - i)
         ret, frame = cap.read()
         transform_image(frame, automatic=False)
+        break
         m, im_dims = transform_image(frame, black_background=black_background)
         if m is not None:
             break
 
+    return
     # if m is still None after this, then default to automatic
     if m is None:
         m, im_dims = transform_image(video_path, automatic=False)
