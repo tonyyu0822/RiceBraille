@@ -7,12 +7,9 @@ from typing import Any
 
 from pyimagesearch.transform import four_point_transform
 from skimage.filters import threshold_local
-import ar_markers as ar
 import cv2
 import imutils
 import numpy as np
-
-import pyzbar.pyzbar as pyzbar
 
 screenCnt = []
 
@@ -22,76 +19,92 @@ def click(event, x, y, flag, image):
         coords = [[x, y]]
         screenCnt.append(coords)
 
-
-def transform_image(image, automatic=False, paper_dims=(1100, 1150), output_image="scannedImage.jpg"):
+# NOTE: no idea what paper_dims is for
+def transform_image(image, paper_dims=(825, 1100), output_image="scannedImage.jpg", black_background=True, automatic=True):
     """
     :param image: image frame
     :param paper_dims: dimensions of paper (in pixels) to scale scanned image to
     :param output_image: name of file to write new image to
+    :param black_background: if True, will perform page calibration by casting background to black 
+    :param automatic: if True, will perform page calibration automatically
     :return: returns transformation matrix
     """
     global screenCnt
-    # load the image and compute the ratio of the old height
-    # to the new height, clone it, and resize it
-    #ratio = image.shape[0] / 500.0
+
+    # preserve original image
     orig = image.copy()
-    #image = imutils.resize(image, height=500)
-
-    #code to mask everything but neon green to black: helps distinguish page from background
-    lower = np.array([30, 50, 50])
-    upper = np.array([50, 255, 255])
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, lower, upper)
-    mask[mask > 0] = 1
-    new_mask = np.subtract(np.ones(np.shape(mask)), mask)
-    new_mask = new_mask.astype('uint8')
-    image = cv2.bitwise_and(image, image, mask=new_mask)
-
-
-    # convert the image to grayscale, blur it, and find edges
-    # in the image
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    # show_image(gray)
-    # TEST - maybe min value is too high? changed from 75 to 5
-    edged = cv2.Canny(gray, 5, 200, True)
-    # show_image(edged)
-
-    # find the contours in the edged image, keeping only the
-    # largest ones, and initialize the screen contour 
-    cnts = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    cnts = imutils.grab_contours(cnts)
-    cnts = sorted(cnts, key=cv2.contourArea, reverse=True)[:5]
-
-    # # test code to loop over all contours
-    # for c in cnts:
-        # peri = cv2.arcLength(c, True)
-        # approx = cv2.approxPolyDP(c, 0.02 * peri, True)
-        # print("----------------------")
-        # print(approx)
-        # print("----------------------")
-
-    # loop over the contours
-    for c in cnts:
-        # approximate the contour
-        peri = cv2.arcLength(c, True)
-        approx = cv2.approxPolyDP(c, 0.02 * peri, True)
-        print(approx)
-        print(len(approx))
-
-        # if our approximated contour has four points, then we
-        # can assume that we have found our screen
-        if len(approx) == 4:
-            screenCnt = approx
-
-            # to verify if we detected correct points
-            colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (255, 255, 255), (100, 100, 100), (15, 205, 200)]
-            for i in range(4):
-                test = cv2.circle(image, (approx[i][0][0], approx[i][0][1]), radius=5, color=colors[i], thickness=-1)
-            show_image(test)
-            break
     
+    if automatic:
+        # page calibration filtering method depends on if background needs to be cast to black
+        if black_background:
+            # mask everything from neon green to black: helps distinguish page from background
+            # first, turn page to black and background to white
+            lower = np.array([30, 50, 50])
+            upper = np.array([50, 255, 255])
+            hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+            mask = cv2.inRange(hsv, lower, upper)
+            # then, flip color so background is black and page is white
+            mask[mask > 0] = 1
+            new_mask = np.subtract(np.ones(np.shape(mask)), mask)
+            new_mask = new_mask.astype('uint8')
+            image = cv2.bitwise_and(image, image, mask=new_mask)
+
+            # convert the image to grayscale, blur it, and find edges in image
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+            edged = cv2.Canny(blurred, 75, 200)
+
+        # otherwise, use double-blur method (when this method works, it seems to tags corners more accurately, but doesn't always work)
+        else:
+            # convert the image to grayscale, blur it, and find edges
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            # double blur ensures that braille dots are not picked up by canny filter
+            blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+            blurred = cv2.GaussianBlur(blurred, (5, 5), 0)
+            edged = cv2.Canny(blurred, 5, 200, True)
+
+        # find the contours in the edged image, keeping only the largest ones, and initialize the screen contour 
+        cnts = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = imutils.grab_contours(cnts)
+        cnts = sorted(cnts, key=cv2.contourArea, reverse=True)[:5]
+
+        # loop over the contours
+        for c in cnts:
+            # approximate the contour
+            peri = cv2.arcLength(c, True)
+            approx = cv2.approxPolyDP(c, 0.02 * peri, True)
+            print(approx)
+            print(len(approx))
+
+            # if our approximated contour has four points, then we can assume that we have found our screen
+            if len(approx) == 4:
+                screenCnt = approx
+
+                # to verify if we detected correct points
+                red = (0, 0, 255)
+                # colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (255, 255, 255), (255, 255, 255), (255, 255, 255)]
+                for i in range(4):
+                    with_corners = cv2.circle(orig, (approx[i][0][0], approx[i][0][1]), radius=5, color=red, thickness=-1)
+                show_image(with_corners)
+                break
+    else:
+        # display image so it can be clicked on
+        cv2.namedWindow('CapturedImage', cv2.WINDOW_NORMAL)
+        cv2.imshow("CapturedImage", image)
+
+        cv2.setMouseCallback('CapturedImage', click, image)
+        while(len(screenCnt) < 4):
+            key = cv2.waitKey(1) & 0xFF
+            if key == 27 or key == ord("q"):
+                print('Image cropped at coordinates: {}'.format(screenCnt))
+                cv2.destroyAllWindows()
+                break
+        screenCnt = np.asarray(screenCnt)
+    
+    # check if we successfully found our screen
+    if screenCnt == []:
+        return None, None
+
     # show the contour (outline) of the piece of paper
     print("STEP 2: Find contours of paper")
     # cv2.drawContours(image, [screenCnt], -1, (0, 255, 0), 2)
@@ -103,6 +116,8 @@ def transform_image(image, automatic=False, paper_dims=(1100, 1150), output_imag
     # apply the four point transform to obtain a top-down
     # view of the original image
     M, warped, dims = four_point_transform(orig, screenCnt.reshape(4, 2))
+    show_image(warped)
+    #show_image(warped)
     #find_markers(warped)
     # convert the warped image to grayscale, then threshold it
     # to give it that 'black and white' paper effect
@@ -122,28 +137,15 @@ def transform_image(image, automatic=False, paper_dims=(1100, 1150), output_imag
     return M, dims
 
 def show_image(image):
-    temp = cv2.resize(image, (1280, 800))
-    cv2.imshow('test', temp)
+    """
+    Displays image using cv2, but rescaled to fit on standard screen
+    
+    :param image: image to be displayed
+    """
+    resized = cv2.resize(image, (1280, 800))
+    cv2.imshow('Image', resized)
     cv2.waitKey(0)
-
-def transform_image_test(image):
-    # uses harris corner detection instead of canny edge detection
-    copy = image.copy()
-    gray = cv2.cvtColor(copy, cv2.COLOR_BGR2GRAY)
-    gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    gray = cv2.Canny(gray, 75, 200)
-    show_image(gray)
-
-    gray = np.float32(gray)
-    dst = cv2.cornerHarris(gray, 2, 3, 0.04)
-
-    dst = cv2.dilate(dst, None)
-
-    copy[dst>0.3 * dst.max()]=[0,0,255]
-
-    test = cv2.resize(copy, (1280,800))
-    cv2.imshow('dst', test)
-    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 @dataclass(frozen=True)
@@ -165,67 +167,32 @@ def transform_point(point: (int, int), transform_metadata: TransformMetadata):
     y = cur.flatten()[1] * transform_metadata.desired_dimensions[1] / transform_metadata.im_dims[1]
     return x, y
 
-####### for debugging, remove later
-def read_frame(cap, second):
-    """
-    Reads frame at given time stamp of video
-    :param second: the time stamp of the video to read, in seconds
-    :return: the frame at the input time stamp
-    """
-    # Read frame
-    if second == 0:
-        success, frame = cap.read()
-    else:
-        frame_count = int(second * cap.get(cv2.CAP_PROP_FPS))
-        for i in range(frame_count):
-            cap.grab()
-        success, frame = cap.retrieve()
 
-    # try:
-        # frame = cv2.resize(frame, (1920, 1080))
-    # except cv2.error as err:
-        # print("Failed to read video")
-        # raise err
-
-    # self.vid_width = 1920
-    # self.vid_height = 1080
-
-    # quit if unable to read the video file
-    if not success:
-        print('Failed to read video')
-        raise Exception("Failed to read video")
-
-    return frame
-
-
-def get_transform_video(video_path, desired_dimensions=(11.5625, 11.0)):
+def get_transform_video(video_path, desired_dimensions=(11.5, 11.0), black_background=True):
     cap = cv2.VideoCapture(video_path)
     video_length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    cap.set(cv2.CAP_PROP_POS_FRAMES, video_length - 25)
-    ret, frame = cap.read()
-    
-    m, im_dims = transform_image(frame)
+
+    m = None
+    for i in range(75, 25, -5):
+        cap.set(cv2.CAP_PROP_POS_FRAMES, video_length - i)
+        ret, frame = cap.read()
+        transform_image(frame, automatic=False)
+        break
+        m, im_dims = transform_image(frame, black_background=black_background)
+        if m is not None:
+            break
+
+    return
+    # if m is still None after this, then default to automatic
+    if m is None:
+        m, im_dims = transform_image(video_path, automatic=False)
+
     return TransformMetadata(m, im_dims, desired_dimensions)
 
 if __name__ == '__main__':
-    ############# FOR TESTING
     video_path = "./test_images/test_0.mp4"
     get_transform_video(video_path)
-    for i in range(20, 70, 5):
-        get_transform_video(video_path, i)
 
 #transform_metadata = get_transform_video("test_images/test.mp4")
 #print(transform_point((591, 263), transform_metadata))
 # transform_point([0, 0], my_mat)
-
-
-#get_transform_video("images/test_vid.mp4")
-#cap = cv2.VideoCapture("images/angles.mp4")
-#ret, frame = cap.read()
-#cv2.imshow('first', frame)
-#cv2.waitKey(0)
-#print(cap.get(cv2.CAP_PROP_FPS))
-#transform_point([0, 0], my_mat)
-#test_angles("images/ar_dig.png", "images/angles.mp4")
-
-#get_transform_video("images/englebretson4.MOV", (8.5, 11))
