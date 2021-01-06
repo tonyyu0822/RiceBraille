@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
 """
 Code to make a GUI to run the RiceBraille project using wxPython.
 
@@ -15,51 +14,55 @@ import wx
 from tkinter import filedialog as fd
 from VideoTracker import VideoTracker
 
-
-
-class Example(wx.Frame):
+# inherits from wx.Frame, a standard container widget
+class BrailleGUI(wx.Frame):
 
     def __init__(self, parent, title):
-        super(Example, self).__init__(parent, title=title)
+        # initialize window params
+        super(BrailleGUI, self).__init__(parent, title=title)
         self.auto_page = 0
         self.show_frames = 0
         self.page_length = 0
         self.page_width = 0
+
         self.InitUI()
         self.Centre()
 
     def InitUI(self):
-
         # panel = window on which controls are placed
         panel = wx.Panel(self)
 
-        # set font
+        # obtain system font
         font = wx.SystemSettings.GetFont(wx.SYS_SYSTEM_FONT)
         font.SetPointSize(9)
 
+        # we have one vertical sizer, and then a bunch of horizontal sizers inside that vertical sizer
         vbox = wx.BoxSizer(wx.VERTICAL)
 
+        # Box 1: Page Length
         hbox1 = wx.BoxSizer(wx.HORIZONTAL)
-        st1 = wx.StaticText(panel, label='Page Length (cm)')
+        st1 = wx.StaticText(panel, label='Page Length (cm):')
         st1.SetFont(font)
-        hbox1.Add(st1, flag=wx.RIGHT, border=8)
+        hbox1.Add(st1, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8)
         self.page_length = wx.TextCtrl(panel, value="27.94")
-        hbox1.Add(self.page_length, proportion=1)
-        vbox.Add(hbox1, border=10)
+        hbox1.Add(self.page_length, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8, proportion=1)
+        vbox.Add(hbox1)
 
+        # box.Add can insert not only widgets, but also empty space
         vbox.Add((-1, 10))
 
+        # Box 2: Page Width
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
-        st2 = wx.StaticText(panel, label='Page Width (cm)')
+        st2 = wx.StaticText(panel, label='Page Width (cm):')
         st2.SetFont(font)
-        hbox2.Add(st2, flag=wx.RIGHT, border=8)
+        hbox2.Add(st2, flag=wx.LEFT|wx.RIGHT, border=8)
         self.page_width = wx.TextCtrl(panel, value="29.21")
-        hbox2.Add(self.page_width, proportion=1)
-        vbox.Add(hbox2, border=10)
-
+        hbox2.Add(self.page_width, flag=wx.LEFT|wx.RIGHT, border=8, proportion=1)
+        vbox.Add(hbox2)
 
         vbox.Add((-1, 25))
 
+        # Box 3: Checkbox Options
         hbox4 = wx.BoxSizer(wx.HORIZONTAL)
         self.auto_page = wx.CheckBox(panel, label='Automatic Page Calibration')
         self.auto_page.SetFont(font)
@@ -71,6 +74,7 @@ class Example(wx.Frame):
 
         vbox.Add((-1, 25))
 
+        # Box 4: Start and Close
         hbox5 = wx.BoxSizer(wx.HORIZONTAL)
         btn1 = wx.Button(panel, label='Start', size=(70, 30))
         hbox5.Add(btn1)
@@ -98,60 +102,11 @@ class Example(wx.Frame):
 
 
 def main():
-
     app = wx.App()
-    ex = Example(None, title='Finger Tracking')
-    ex.Show()
+    gui = BrailleGUI(None, title='Finger Tracking')
+    gui.Show()
     app.MainLoop()
 
 
 if __name__ == '__main__':
     main()
-
-'''
-import tkinter as tk
-from tkinter import filedialog as fd
-from VideoTracker import VideoTracker
-
-def show_entry_fields():
-    print("First Field: %s\nLast Field: %s" % (e1.get(), e2.get()))
-
-
-def start_processing():
-    name = fd.askopenfilenames()
-    print(name)
-    VideoTracker(name[0], auto_calibrate=False, auto_page_calibrate=auto_page_calibration.get(), show_frame=show_frames.get(), paper_dims=(float(e1.get()), float(e2.get())))
-
-
-master = tk.Tk()
-tk.Label(master,
-         text="Page Length(cm)").grid(row=0)
-tk.Label(master,
-         text="Page Width(cm)").grid(row=1)
-
-e1 = tk.Entry(master)
-e1.insert(tk.END, '27.94')
-e2 = tk.Entry(master)
-e2.insert(tk.END, '29.21')
-
-show_frames = tk.BooleanVar()
-auto_page_calibration = tk.BooleanVar()
-tk.Checkbutton(master, text="Show frames", variable=show_frames).grid(row=3, sticky=tk.W)
-e1.grid(row=0, column=1)
-e2.grid(row=1, column=1)
-tk.Checkbutton(master, text="Automatic Page Calibration", variable=auto_page_calibration).grid(row=4, sticky=tk.W)
-
-tk.Button(master,
-          text='Quit',
-          command=master.quit).grid(row=5,
-                                    column=0,
-                                    sticky=tk.W,
-                                    pady=4)
-tk.Button(master,
-          text='Start', command=start_processing).grid(row=5,
-                                                            column=1,
-                                                            sticky=tk.W,
-                                                            pady=4)
-errmsg = 'Error!'
-tk.mainloop()
-'''
