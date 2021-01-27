@@ -11,6 +11,7 @@ last modified: April 2018
 """
 
 import wx
+import re
 from VideoTracker import VideoTracker
 
 # inherits from wx.Frame, a standard container widget
@@ -18,15 +19,15 @@ class BrailleGUI(wx.Frame):
 
     def __init__(self, parent, title):
         # initialize window params
-        super(BrailleGUI, self).__init__(parent, title=title)
+        super(BrailleGUI, self).__init__(parent, title=title, size=(500, 400))
         self.auto_finger = 0
         self.auto_page = 0
         self.char_track = 0
         self.show_frames = 0
         self.page_length = 0
         self.page_width = 0
-        self.brfFile = None
-        self.videoFile = None
+        self.brfFile = "N/A" 
+        self.videoFile = "" 
 
         self.InitUI()
         self.Centre()
@@ -92,10 +93,34 @@ class BrailleGUI(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnOpenBrf, btn0)
         vbox.Add(hbox4)
 
+        # Indication if file has been added
+        hbox_brf = wx.BoxSizer(wx.HORIZONTAL)
+        self.st_brf = wx.StaticText(panel, label="Uploaded File: " + self.brfFile)
+        self.st_brf.SetFont(font)
+        hbox_brf.Add(self.st_brf, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8)
+        vbox.Add(hbox_brf)
+
+
         vbox.Add((-1, 25))
 
         ### SECTION 3: Additional Options
-        
+        # Instructions
+        hbox5 = wx.BoxSizer(wx.HORIZONTAL)
+        st5 = wx.StaticText(panel, label='Select additional options to enable:')
+        st5.SetFont(font)
+        hbox5.Add(st5, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8)
+        vbox.Add(hbox5)
+
+        # Show frames (ie. user gets to see video as it is processed frame by frame)
+        hbox6 = wx.BoxSizer(wx.HORIZONTAL)
+        st6 = wx.StaticText(panel, label='Show frames:')
+        st6.SetFont(font)
+        hbox6.Add(st6, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8)
+        self.show_frames = wx.CheckBox(panel)
+        hbox6.Add(self.show_frames, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8, proportion=1)
+        vbox.Add(hbox6)
+
+        vbox.Add((-1, 5))
 
         # Box 4: Start and Close
         hbox5 = wx.BoxSizer(wx.HORIZONTAL)
@@ -122,6 +147,12 @@ class BrailleGUI(wx.Frame):
 
             # Save file path given
             self.brfFile = fileDialog.GetPath()
+        
+        # Update text to reflect that file has been uploaded
+        # First, extract only the name of file uploaded (and remove the rest of the path)
+        brfFileName = re.split('[\\\/]', self.brfFile)
+        self.st_brf.SetLabel("File Uploaded: " + brfFileName[-1])
+
 
     def OnQuit(self, event):
         """
@@ -138,11 +169,11 @@ class BrailleGUI(wx.Frame):
                 return     # the user changed their mind
 
             # Save file path given
-            self.brfFile = fileDialog.GetPath()
+            self.videoFile = fileDialog.GetPath()
 
-        VideoTracker(name[0], './braille_files/B_2019 project FingerTracker.brf', auto_calibrate=False, auto_page_calibrate=self.auto_page.IsChecked(),
+        VideoTracker(self.videoFile, self.brfFile, auto_calibrate=False, auto_page_calibrate=self.auto_page.IsChecked(),
                      show_frame=self.show_frames.IsChecked(), paper_dims=(float(self.page_length.GetValue()), float(self.page_width.GetValue())))
-        self.close()
+        self.Close()
 
 
 def main():
