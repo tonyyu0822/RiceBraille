@@ -19,7 +19,7 @@ class BrailleGUI(wx.Frame):
 
     def __init__(self, parent, title):
         # initialize window params
-        super(BrailleGUI, self).__init__(parent, title=title, size=(500, 400))
+        super(BrailleGUI, self).__init__(parent, title=title, size=(500, 600))
         self.auto_finger = 0
         self.auto_page = 0
         self.char_track = 0
@@ -28,6 +28,8 @@ class BrailleGUI(wx.Frame):
         self.page_width = 0
         self.brfFile = "N/A" 
         self.videoFile = "" 
+        self.fingers = [0] * 8
+        self.dirPath = ":C/User/Documents/Braille_Outputs"
 
         self.InitUI()
         self.Centre()
@@ -100,7 +102,6 @@ class BrailleGUI(wx.Frame):
         hbox_brf.Add(self.st_brf, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8)
         vbox.Add(hbox_brf)
 
-
         vbox.Add((-1, 25))
 
         ### SECTION 3: Additional Options
@@ -117,22 +118,61 @@ class BrailleGUI(wx.Frame):
         st6.SetFont(font)
         hbox6.Add(st6, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8)
         self.show_frames = wx.CheckBox(panel)
+        self.show_frames.SetValue(True)
         hbox6.Add(self.show_frames, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8, proportion=1)
         vbox.Add(hbox6)
 
         vbox.Add((-1, 5))
 
+        # Select fingers to track
+        hbox7 = wx.BoxSizer(wx.HORIZONTAL)
+        st7 = wx.StaticText(panel, label='Select fingers to track:')
+        st7.SetFont(font)
+        hbox7.Add(st7, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8)
+        finger_labels = ['p', 'r', 'm', 'i', 'i', 'm', 'r', 'p']
+        for i in range(8):
+            self.fingers[i] = wx.CheckBox(panel, label=finger_labels[i])
+            self.fingers[i].SetValue(True)
+            hbox7.Add(self.fingers[i], flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8, proportion=1)
+        vbox.Add(hbox7)
+
+        vbox.Add((-1, 5))
+
+        # Enter destination of output file
+        hbox8 = wx.BoxSizer(wx.HORIZONTAL)
+        st8 = wx.StaticText(panel, label='Enter destination of output file:')
+        st8.SetFont(font)
+        hbox8.Add(st8, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8)
+        btn_dest = wx.Button(panel, label='Choose file', size=(70, 30))
+        hbox8.Add(btn_dest)
+        self.Bind(wx.EVT_BUTTON, self.OnSelectDest, btn_dest)
+        vbox.Add(hbox8)
+
+        vbox.Add((-1, 5))
+
+        # Indication if file has been added
+        hbox_brf = wx.BoxSizer(wx.HORIZONTAL)
+        self.st_brf = wx.StaticText(panel, label="Uploaded File: " + self.brfFile)
+        self.st_brf.SetFont(font)
+        hbox_brf.Add(self.st_brf, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8)
+        vbox.Add(hbox_brf)
+
+        # Enter name of output file
+        
+
+        vbox.Add((-1, 5))
+
         # Box 4: Start and Close
-        hbox5 = wx.BoxSizer(wx.HORIZONTAL)
-        btn1 = wx.Button(panel, label='Start', size=(70, 30))
-        hbox5.Add(btn1)
-        self.Bind(wx.EVT_BUTTON, self.StartProcessing, btn1)
+        hbox_process = wx.BoxSizer(wx.HORIZONTAL)
+        btn_start = wx.Button(panel, label='Start', size=(70, 30))
+        hbox_process.Add(btn_start)
+        self.Bind(wx.EVT_BUTTON, self.StartProcessing, btn_start)
 
-        btn2 = wx.Button(panel, label='Close', size=(70, 30))
-        self.Bind(wx.EVT_BUTTON, self.OnQuit, btn2)
+        btn_close = wx.Button(panel, label='Close', size=(70, 30))
+        self.Bind(wx.EVT_BUTTON, self.OnQuit, btn_close)
 
-        hbox5.Add(btn2, flag=wx.LEFT|wx.BOTTOM, border=5)
-        vbox.Add(hbox5, flag=wx.ALIGN_RIGHT|wx.RIGHT, border=10)
+        hbox_process.Add(btn_close, flag=wx.LEFT|wx.BOTTOM, border=5)
+        vbox.Add(hbox_process, flag=wx.ALIGN_RIGHT|wx.RIGHT, border=10)
 
         panel.SetSizer(vbox)
 
@@ -152,6 +192,19 @@ class BrailleGUI(wx.Frame):
         # First, extract only the name of file uploaded (and remove the rest of the path)
         brfFileName = re.split('[\\\/]', self.brfFile)
         self.st_brf.SetLabel("File Uploaded: " + brfFileName[-1])
+
+    def OnSelectDest(self, event):
+        with wx.DirDialog(self, "Select destination", "", wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST) as dirDialog:
+            if dirDialog.ShowModal() == wx.ID_CANCEL:
+                return
+
+            # Save directory path given
+            self.dirPath = dirDialog.GetPath()
+        
+        # Update text to reflect that directory has been chosen
+        # First, extract only the name of final folder (and remove the rest of the path)
+        destNames = re.split('[\\\/]', self.dirPath)
+        self.st_brf.SetLabel("Destination Folder: " + destNames[-1])
 
 
     def OnQuit(self, event):
