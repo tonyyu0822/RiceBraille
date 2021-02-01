@@ -169,9 +169,18 @@ class BrailleGUI(wx.Frame):
         hbox_outname.Add(self.output_name, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8)
         vbox.Add(hbox_outname)
         
-        vbox.Add((-1, 5))
+        vbox.Add((-1, 25))
 
-        # Box 4: Start and Close
+        ### SECTION 4: Final instructions
+        hbox_instruct = wx.BoxSizer(wx.HORIZONTAL)
+        self.st_instruct = wx.StaticText(panel, label="After clicking start, please select Braille reading video to track: ")
+        self.st_instruct.SetFont(font)
+        hbox_instruct.Add(self.st_instruct, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8)
+        vbox.Add(hbox_instruct)
+
+        vbox.Add((-1, 25))
+
+        ### SECTION 5: Start and Close
         hbox_process = wx.BoxSizer(wx.HORIZONTAL)
         btn_start = wx.Button(panel, label='Start', size=(70, 30))
         hbox_process.Add(btn_start)
