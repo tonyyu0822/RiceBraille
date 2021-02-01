@@ -13,6 +13,7 @@ last modified: April 2018
 import wx
 import re
 from VideoTracker import VideoTracker
+from datetime import datetime
 
 # inherits from wx.Frame, a standard container widget
 class BrailleGUI(wx.Frame):
@@ -157,9 +158,17 @@ class BrailleGUI(wx.Frame):
         hbox_brf.Add(self.st_brf, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8)
         vbox.Add(hbox_brf)
 
-        # Enter name of output file
-        
+        vbox.Add((-1, 5))
 
+        # Enter name of output file
+        hbox_outname = wx.BoxSizer(wx.HORIZONTAL)
+        self.st_outname = wx.StaticText(panel, label="Enter name of output file: ")
+        self.st_outname.SetFont(font)
+        hbox_outname.Add(self.st_outname, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8)
+        self.output_name = wx.TextCtrl(panel, value=f"Braille_Output_Run_{datetime.now()}")
+        hbox_outname.Add(self.output_name, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8)
+        vbox.Add(hbox_outname)
+        
         vbox.Add((-1, 5))
 
         # Box 4: Start and Close
