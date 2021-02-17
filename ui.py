@@ -149,8 +149,6 @@ class BrailleGUI(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnSelectDest, btn_dest)
         vbox.Add(hbox8)
 
-        vbox.Add((-1, 5))
-
         # Indication if file has been added
         hbox_brf = wx.BoxSizer(wx.HORIZONTAL)
         self.st_brf = wx.StaticText(panel, label="Uploaded File: " + self.brfFile)
@@ -165,7 +163,7 @@ class BrailleGUI(wx.Frame):
         self.st_outname = wx.StaticText(panel, label="Enter name of output file: ")
         self.st_outname.SetFont(font)
         hbox_outname.Add(self.st_outname, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8)
-        self.output_name = wx.TextCtrl(panel, value=f"Braille_Output_Run_{datetime.now()}")
+        self.output_name = wx.TextCtrl(panel, value=f"output_{datetime.now()}")
         hbox_outname.Add(self.output_name, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=8)
         vbox.Add(hbox_outname)
         
@@ -224,7 +222,6 @@ class BrailleGUI(wx.Frame):
         destNames = re.split('[\\\/]', self.dirPath)
         self.st_brf.SetLabel("Destination Folder: " + destNames[-1])
 
-
     def OnQuit(self, event):
         """
         Event handler to quit software
@@ -235,15 +232,18 @@ class BrailleGUI(wx.Frame):
         """
         Event handler to start processing video
         """
-        with wx.FileDialog(self, "Open .brf file", wildcard=".brf files (*.brf)|*.brf", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+        with wx.FileDialog(self, "Open .mp4 file", wildcard=".mp4 files (*.mp4)|*.mp4", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
             if fileDialog.ShowModal() == wx.ID_CANCEL:
                 return     # the user changed their mind
 
             # Save file path given
             self.videoFile = fileDialog.GetPath()
 
-        VideoTracker(self.videoFile, self.brfFile, auto_calibrate=False, auto_page_calibrate=self.auto_page.IsChecked(),
-                     show_frame=self.show_frames.IsChecked(), paper_dims=(float(self.page_length.GetValue()), float(self.page_width.GetValue())))
+        # Concatenate given output path and output name into a single file destination
+        output_path = self.dirPath + self.self.output_name
+
+        VideoTracker(self.videoFile, page_path=self.brfFile, auto_finger_calib=False, auto_page_calib=self.auto_page.IsChecked(),
+                     output_path=output_path, show_frame=self.show_frames.IsChecked()) 
         self.Close()
 
 
