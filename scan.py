@@ -19,8 +19,7 @@ def click(event, x, y, flag, image):
         coords = [[x, y]]
         screenCnt.append(coords)
 
-# NOTE: no idea what paper_dims is for
-def transform_image(image, paper_dims=(825, 1100), output_image="scannedImage.jpg", black_background=True, automatic=True):
+def transform_image(image, output_image="scannedImage.jpg", automatic=True):
     """
     :param image: image frame
     :param paper_dims: dimensions of paper (in pixels) to scale scanned image to
@@ -35,33 +34,22 @@ def transform_image(image, paper_dims=(825, 1100), output_image="scannedImage.jp
     orig = image.copy()
     
     if automatic:
-        # page calibration filtering method depends on if background needs to be cast to black
-        if black_background:
-            # mask everything from neon green to black: helps distinguish page from background
-            # first, turn page to black and background to white
-            lower = np.array([30, 50, 50])
-            upper = np.array([50, 255, 255])
-            hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-            mask = cv2.inRange(hsv, lower, upper)
-            # then, flip color so background is black and page is white
-            mask[mask > 0] = 1
-            new_mask = np.subtract(np.ones(np.shape(mask)), mask)
-            new_mask = new_mask.astype('uint8')
-            image = cv2.bitwise_and(image, image, mask=new_mask)
+        # mask everything from neon green to black: helps distinguish page from background
+        # first, turn page to black and background to white
+        lower = np.array([30, 50, 50])
+        upper = np.array([50, 255, 255])
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, lower, upper)
+        # then, flip color so background is black and page is white
+        mask[mask > 0] = 1
+        new_mask = np.subtract(np.ones(np.shape(mask)), mask)
+        new_mask = new_mask.astype('uint8')
+        image = cv2.bitwise_and(image, image, mask=new_mask)
 
-            # convert the image to grayscale, blur it, and find edges in image
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-            edged = cv2.Canny(blurred, 75, 200)
-
-        # otherwise, use double-blur method (when this method works, it seems to tags corners more accurately, but doesn't always work)
-        else:
-            # convert the image to grayscale, blur it, and find edges
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            # double blur ensures that braille dots are not picked up by canny filter
-            blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-            blurred = cv2.GaussianBlur(blurred, (5, 5), 0)
-            edged = cv2.Canny(blurred, 5, 200, True)
+        # convert the image to grayscale, blur it, and find edges in image
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        edged = cv2.Canny(blurred, 75, 200)
 
         # find the contours in the edged image, keeping only the largest ones, and initialize the screen contour 
         cnts = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
@@ -73,20 +61,18 @@ def transform_image(image, paper_dims=(825, 1100), output_image="scannedImage.jp
             # approximate the contour
             peri = cv2.arcLength(c, True)
             approx = cv2.approxPolyDP(c, 0.02 * peri, True)
-            print(approx)
-            print(len(approx))
 
-            # if our approximated contour has four points, then we can assume that we have found our screen
+            # if our approximated contour has four points, then we can assume that we have found the corners
             if len(approx) == 4:
                 screenCnt = approx
 
-                # to verify if we detected correct points
+                # Display tagged corners so that automatic page detection can be manually verified
                 red = (0, 0, 255)
-                # colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (255, 255, 255), (255, 255, 255), (255, 255, 255)]
                 for i in range(4):
                     with_corners = cv2.circle(orig, (approx[i][0][0], approx[i][0][1]), radius=5, color=red, thickness=-1)
                 show_image(with_corners)
                 break
+    # Manual calibration
     else:
         # display image so it can be clicked on
         cv2.namedWindow('CapturedImage', cv2.WINDOW_NORMAL)
@@ -138,7 +124,8 @@ def transform_image(image, paper_dims=(825, 1100), output_image="scannedImage.jp
 
 def show_image(image):
     """
-    Displays image using cv2, but rescaled to fit on standard screen
+    Displays image using cv2, but rescaled to fit on standard screen.
+    Primarily intended for viewing images while debugging.
     
     :param image: image to be displayed
     """
@@ -168,31 +155,40 @@ def transform_point(point: (int, int), transform_metadata: TransformMetadata):
     return x, y
 
 
-def get_transform_video(video_path, desired_dimensions=(11.5, 11.0), black_background=True):
+def get_transform_video(video_path, auto_page_calib=True, desired_dimensions=(11.5, 11.0)):
+    """
+    Takes a video of Braille reading in which the last 5 seconds of the video don't feature
+    anything except the page to be read. This function will provide the transformation mapping
+    this page, as viewed from an angle to a front-on page view. 
+
+    :param video_path: path to video of Braille reading to be analyzed
+    :param auto_page_calib: bool that marks if page calibration should be automatic
+    :param desired_dimensions: indicates the actual dimensions of the page in inches
+    """
     cap = cv2.VideoCapture(video_path)
     video_length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     m = None
-    for i in range(75, 25, -5):
-        cap.set(cv2.CAP_PROP_POS_FRAMES, video_length - i)
-        ret, frame = cap.read()
-        transform_image(frame, automatic=False)
-        break
-        m, im_dims = transform_image(frame, black_background=black_background)
-        if m is not None:
-            break
 
-    return
-    # if m is still None after this, then default to automatic
+    # auto page calibration
+    if auto_page_calib:
+        # try auto page calibration with a couple different frames before giving up
+        for i in range(75, 25, -5):
+            cap.set(cv2.CAP_PROP_POS_FRAMES, video_length - i)
+            ret, frame = cap.read()
+            if ret: # ie. if video read was successful
+                m, im_dims = transform_image(frame)
+            if m is not None:
+                break
+
+    # if m is still None after this, then default to manual read
     if m is None:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, video_length - 75)
         m, im_dims = transform_image(video_path, automatic=False)
 
     return TransformMetadata(m, im_dims, desired_dimensions)
 
+# Test Code
 if __name__ == '__main__':
     video_path = "./test_images/test_0.mp4"
     get_transform_video(video_path)
-
-#transform_metadata = get_transform_video("test_images/test.mp4")
-#print(transform_point((591, 263), transform_metadata))
-# transform_point([0, 0], my_mat)
